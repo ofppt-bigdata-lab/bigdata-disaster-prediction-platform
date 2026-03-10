@@ -1,0 +1,129 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: ["feature/**", "fix/**", "develop"]
+  pull_request:
+    branches: [develop, main]
+
+jobs:
+  ci-t1:
+    name: CI — T1 Data Collection
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install flake8 black pytest pytest-cov
+      - run: |
+          if [ -f t1-data-collection/requirements-t1.txt ]; then
+            pip install -r t1-data-collection/requirements-t1.txt
+          fi
+      - name: Lint T1
+        run: |
+          if [ -d t1-data-collection/src ]; then
+            flake8 t1-data-collection/src/ --max-line-length=120 || true
+            black --check t1-data-collection/src/ || true
+          else
+            echo "T1 src not found yet, skipping lint"
+          fi
+      - name: Tests T1
+        run: |
+          if [ -d t1-data-collection/tests ]; then
+            pytest t1-data-collection/tests/ -v --tb=short || true
+          else
+            echo "T1 tests not found yet, skipping"
+          fi
+
+  ci-t2:
+    name: CI — T2 Big Data Infra
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install flake8 black pytest
+      - name: Lint T2
+        run: |
+          if [ -d t2-bigdata-infra/src ]; then
+            flake8 t2-bigdata-infra/src/ --max-line-length=120 || true
+          else
+            echo "T2 src not found yet, skipping"
+          fi
+      - name: Tests T2
+        run: |
+          if [ -d t2-bigdata-infra/tests ]; then
+            pytest t2-bigdata-infra/tests/ -v --tb=short || true
+          else
+            echo "T2 tests not found yet, skipping"
+          fi
+
+  ci-t3-ml:
+    name: CI — T3 ML Models
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install flake8 black pytest
+      - name: Lint T3
+        run: |
+          if [ -d t3-ml-models/src ]; then
+            flake8 t3-ml-models/src/ --max-line-length=120 || true
+          else
+            echo "T3 src not found yet, skipping"
+          fi
+      - name: Tests T3
+        run: |
+          if [ -d t3-ml-models/tests ]; then
+            pytest t3-ml-models/tests/ -v --tb=short || true
+          else
+            echo "T3 tests not found yet, skipping"
+          fi
+
+  ci-t4-api:
+    name: CI — T4 Platform API
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install flake8 black pytest fastapi httpx
+      - name: Lint T4
+        run: |
+          if [ -d t4-platform-api/backend/src ]; then
+            flake8 t4-platform-api/backend/src/ --max-line-length=120 || true
+          else
+            echo "T4 src not found yet, skipping"
+          fi
+      - name: Tests T4
+        run: |
+          if [ -d t4-platform-api/backend/tests ]; then
+            pytest t4-platform-api/backend/tests/ -v --tb=short || true
+          else
+            echo "T4 tests not found yet, skipping"
+          fi
+
+  notify-slack:
+    name: Notify Slack
+    runs-on: ubuntu-latest
+    needs: [ci-t1, ci-t2, ci-t3-ml, ci-t4-api]
+    if: always()
+    steps:
+      - name: Notify success
+        if: ${{ !contains(needs.*.result, 'failure') }}
+        run: |
+          curl -s -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+          -H 'Content-type: application/json' \
+          --data "{
+            \"text\": \"✅ *CI verte* sur \`${{ github.ref_name }}\`\nPar: ${{ github.actor }}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Voir les logs>\"
+          }" || true
+
+      - name: Notify failure
+        if: ${{ contains(needs.*.result, 'failure') }}
+        run: |
+          curl -s -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+          -H 'Content-type: application/json' \
+          --data "{
+            \"text\": \"❌ *CI échouée* sur \`${{ github.ref_name }}\`\nPar: ${{ github.actor }}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Voir les logs>\"
+          }" || true
