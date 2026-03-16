@@ -1,0 +1,15 @@
+# Admin owner de tout
+*                              @ofppt-bigdata-lab/team-admin
+
+# Chaque équipe owner de son dossier
+t1-data-collection/            @ofppt-bigdata-lab/team-data-collection
+t2-bigdata-infra/              @ofppt-bigdata-lab/team-infrastructure-big-data
+t3-ml-models/                  @ofppt-bigdata-lab/team-ml-dl-modelisation
+t4-platform-api/               @ofppt-bigdata-lab/team-platform-api
+
+# MLOps : T3 + Admin ensemble
+mlops-cicd/                    @ofppt-bigdata-lab/team-admin @ofppt-bigdata-lab/team-ml-dl-modelisation
+
+# CI/CD et config : Admin uniquement
+.github/workflows/             @ofppt-bigdata-lab/team-admin
+.github/CODEOWNERS             @ofppt-bigdata-lab/team-admin
